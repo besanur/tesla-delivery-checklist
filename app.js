@@ -379,57 +379,100 @@
     scheduleSave();
   });
 
-  function resizeImageFile(file, maxDim, quality) {
-    maxDim = maxDim || 1280;
-    quality = quality || 0.72;
+  function loadFileAsDataUrl(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () => reject(new Error("Datei konnte nicht gelesen werden"));
-      reader.onload = () => {
-        const img = new Image();
-        img.onerror = () => reject(new Error("Bild konnte nicht geladen werden"));
-        img.onload = () => {
-          let width = img.naturalWidth;
-          let height = img.naturalHeight;
-          if (width > maxDim || height > maxDim) {
-            if (width >= height) {
-              height = Math.round(height * (maxDim / width));
-              width = maxDim;
-            } else {
-              width = Math.round(width * (maxDim / height));
-              height = maxDim;
-            }
-          }
-          const canvas = document.createElement("canvas");
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL("image/jpeg", quality));
-        };
-        img.src = reader.result;
-      };
+      reader.onload = () => resolve(reader.result);
       reader.readAsDataURL(file);
     });
   }
 
-  function handlePhotoFile(fileInput) {
+  function canvasToResizedDataUrl(sourceCanvas, maxDim, quality) {
+    maxDim = maxDim || 1280;
+    quality = quality || 0.72;
+    let width = sourceCanvas.width;
+    let height = sourceCanvas.height;
+    if (width > maxDim || height > maxDim) {
+      if (width >= height) {
+        height = Math.round(height * (maxDim / width));
+        width = maxDim;
+      } else {
+        width = Math.round(width * (maxDim / height));
+        height = maxDim;
+      }
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d").drawImage(sourceCanvas, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", quality);
+  }
+
+  // ---------- Photo crop dialog ----------
+  let activeCropper = null;
+  let pendingCropResolve = null;
+
+  function openCropModal(dataUrl) {
+    return new Promise((resolve) => {
+      pendingCropResolve = resolve;
+      const modal = document.getElementById("cropModal");
+      const img = document.getElementById("cropImage");
+      if (activeCropper) {
+        activeCropper.destroy();
+        activeCropper = null;
+      }
+      img.src = dataUrl;
+      modal.hidden = false;
+      activeCropper = new Cropper(img, {
+        viewMode: 1,
+        autoCropArea: 1,
+        background: false,
+        responsive: true,
+        checkOrientation: false,
+      });
+    });
+  }
+
+  function closeCropModal(result) {
+    document.getElementById("cropModal").hidden = true;
+    if (activeCropper) {
+      activeCropper.destroy();
+      activeCropper = null;
+    }
+    if (pendingCropResolve) {
+      pendingCropResolve(result);
+      pendingCropResolve = null;
+    }
+  }
+
+  document.getElementById("cropCloseBtn").addEventListener("click", () => closeCropModal(null));
+  document.getElementById("cropCancelBtn").addEventListener("click", () => closeCropModal(null));
+  document.getElementById("cropConfirmBtn").addEventListener("click", () => {
+    if (!activeCropper) { closeCropModal(null); return; }
+    const canvas = activeCropper.getCroppedCanvas({ imageSmoothingQuality: "high" });
+    closeCropModal(canvas);
+  });
+
+  async function handlePhotoFile(fileInput) {
     const file = fileInput.files && fileInput.files[0];
     fileInput.value = "";
     if (!file || detailSectionId === null) return;
-    resizeImageFile(file, 1280, 0.72)
-      .then((dataUrl) => {
-        const entry = getItemEntry(detailSectionId, detailIndex);
-        entry.photo = dataUrl;
-        scheduleSave();
-        document.getElementById("detailPhotoImg").src = dataUrl;
-        document.getElementById("detailPhotoPreview").hidden = false;
-        document.getElementById("detailPhotoEmptyHint").hidden = true;
-      })
-      .catch((err) => {
-        console.warn("Foto konnte nicht verarbeitet werden", err);
-        openAlertModal({ title: "Foto fehlgeschlagen", message: "Das Foto konnte nicht verarbeitet werden. Bitte erneut versuchen." });
-      });
+    try {
+      const rawDataUrl = await loadFileAsDataUrl(file);
+      const croppedCanvas = await openCropModal(rawDataUrl);
+      if (!croppedCanvas) return; // Nutzer hat den Zuschnitt abgebrochen
+      const dataUrl = canvasToResizedDataUrl(croppedCanvas, 1280, 0.72);
+      const entry = getItemEntry(detailSectionId, detailIndex);
+      entry.photo = dataUrl;
+      scheduleSave();
+      document.getElementById("detailPhotoImg").src = dataUrl;
+      document.getElementById("detailPhotoPreview").hidden = false;
+      document.getElementById("detailPhotoEmptyHint").hidden = true;
+    } catch (err) {
+      console.warn("Foto konnte nicht verarbeitet werden", err);
+      openAlertModal({ title: "Foto fehlgeschlagen", message: "Das Foto konnte nicht verarbeitet werden. Bitte erneut versuchen." });
+    }
   }
 
   document.getElementById("detailCaptureInput").addEventListener("change", (e) => {

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Tesla Model Y Juniper – Delivery Checkliste</title>
+<meta name="description" content="Offline-fähige Delivery-Day-Checkliste für den Tesla Model Y Juniper. Läuft komplett im Browser, speichert lokal, exportiert als PDF." />
+<meta name="theme-color" content="#CC0000" />
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-mark">T</span>
+        <div class="brand-text">
+          <strong>Model Y Juniper</strong>
+          <span>Delivery Checkliste</span>
+        </div>
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Farbmodus wechseln">🌙</button>
+      </div>
+      <div class="checklist-switcher">
+        <select id="checklistSelect" aria-label="Checkliste wählen"></select>
+        <button id="newChecklistBtn" type="button" class="switcher-btn" aria-label="Neue Checkliste">＋</button>
+        <button id="renameChecklistBtn" type="button" class="switcher-btn" aria-label="Checkliste umbenennen">✏️</button>
+        <button id="deleteChecklistBtn" type="button" class="switcher-btn" aria-label="Checkliste löschen">🗑</button>
+      </div>
+      <div class="progress-wrap" aria-label="Fortschritt">
+        <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+        <span id="progressLabel" class="progress-label">0 / 0</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="app" class="container"></main>
+
+  <footer class="actions-bar">
+    <button id="exportPdfBtn" class="btn btn-primary">⬇ Als PDF exportieren</button>
+    <button id="resetBtn" class="btn btn-ghost">Zurücksetzen</button>
+    <span id="saveStatus" class="save-status">Alles gespeichert</span>
+  </footer>
+
+  <template id="sectionTemplate">
+    <section class="card" data-section>
+      <button class="card-header" type="button" data-toggle>
+        <span class="card-title" data-title></span>
+        <span class="card-count" data-count></span>
+        <span class="chevron">▾</span>
+      </button>
+      <div class="card-body" data-body>
+        <ul class="item-list" data-items></ul>
+        <label class="notes-label">Notizen</label>
+        <textarea class="notes-field" data-notes rows="2" placeholder="Beobachtungen, Mängel, Seriennummern…"></textarea>
+      </div>
+    </section>
+  </template>
+
+  <template id="itemTemplate">
+    <li class="item" data-item>
+      <label class="checkbox-row">
+        <input type="checkbox" data-check />
+        <span class="checkbox-box" aria-hidden="true"></span>
+        <span class="item-text" data-text></span>
+      </label>
+      <button class="item-detail-btn" type="button" data-detail-btn aria-label="Details, Kommentar und Foto öffnen">
+        <span class="badge badge-comment" data-badge-comment hidden title="Kommentar vorhanden">💬</span>
+        <span class="badge badge-photo" data-badge-photo hidden title="Foto vorhanden">📷</span>
+        <span class="chevron-mini" aria-hidden="true">›</span>
+      </button>
+    </li>
+  </template>
+
+  <div id="itemDetailModal" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="detailItemTitle">
+      <div class="modal-header">
+        <h2 id="detailItemTitle" class="modal-title"></h2>
+        <button id="detailCloseBtn" type="button" class="modal-close" aria-label="Schließen">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="notes-label" for="detailComment">Kommentar</label>
+        <textarea id="detailComment" class="notes-field" rows="4" placeholder="Beobachtung zu diesem Punkt…"></textarea>
+
+        <label class="notes-label">Foto</label>
+        <div id="detailPhotoPreview" class="photo-preview" hidden>
+          <img id="detailPhotoImg" alt="Aufgenommenes Foto" />
+          <button id="detailRemovePhotoBtn" type="button" class="btn btn-ghost">Foto entfernen</button>
+        </div>
+        <p id="detailPhotoEmptyHint" class="photo-empty-hint">Noch kein Foto vorhanden.</p>
+
+        <div class="photo-actions">
+          <label class="btn btn-ghost photo-action-label">
+            📷 Foto aufnehmen
+            <input id="detailCaptureInput" type="file" accept="image/*" capture="environment" hidden />
+          </label>
+          <label class="btn btn-ghost photo-action-label">
+            🖼 Aus Galerie wählen
+            <input id="detailUploadInput" type="file" accept="image/*" hidden />
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="checklist-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

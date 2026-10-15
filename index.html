@@ -92,14 +92,31 @@
         <p id="detailPhotoEmptyHint" class="photo-empty-hint">Noch kein Foto vorhanden.</p>
 
         <div class="photo-actions">
-          <label class="btn btn-ghost photo-action-label">
-            📷 Foto aufnehmen
-            <input id="detailCaptureInput" type="file" accept="image/*" capture="environment" hidden />
-          </label>
+          <button id="openCameraBtn" type="button" class="btn btn-ghost">📷 Foto aufnehmen</button>
           <label class="btn btn-ghost photo-action-label">
             🖼 Aus Galerie wählen
             <input id="detailUploadInput" type="file" accept="image/*" hidden />
           </label>
+          <!-- Fallback, falls getUserMedia nicht verfügbar ist (kein Live-Stream möglich) -->
+          <input id="detailCaptureInput" type="file" accept="image/*" capture="environment" hidden />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="cameraModal" class="modal-overlay" hidden>
+    <div class="modal-card camera-card" role="dialog" aria-modal="true" aria-labelledby="cameraTitle">
+      <div class="modal-header">
+        <h2 id="cameraTitle" class="modal-title">Foto aufnehmen</h2>
+        <button id="cameraCloseBtn" type="button" class="modal-close" aria-label="Abbrechen">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="camera-container">
+          <video id="cameraVideo" autoplay playsinline muted></video>
+        </div>
+        <div class="dialog-actions">
+          <button id="cameraCancelBtn" type="button" class="btn btn-ghost">Abbrechen</button>
+          <button id="cameraShutterBtn" type="button" class="btn btn-primary">📸 Auslösen</button>
         </div>
       </div>
     </div>

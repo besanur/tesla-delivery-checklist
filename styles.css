@@ -494,3 +494,24 @@ input:checked ~ .item-text {
   display: block;
   max-width: 100%;
 }
+
+/* ---------- Live camera capture ---------- */
+.camera-card {
+  max-width: 560px;
+}
+.camera-container {
+  max-height: 55vh;
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.camera-container video {
+  display: block;
+  width: 100%;
+  max-height: 55vh;
+  object-fit: contain;
+}

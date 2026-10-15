@@ -454,12 +454,9 @@
     closeCropModal(canvas);
   });
 
-  async function handlePhotoFile(fileInput) {
-    const file = fileInput.files && fileInput.files[0];
-    fileInput.value = "";
-    if (!file || detailSectionId === null) return;
+  async function processPickedPhoto(rawDataUrl) {
+    if (detailSectionId === null) return;
     try {
-      const rawDataUrl = await loadFileAsDataUrl(file);
       const croppedCanvas = await openCropModal(rawDataUrl);
       if (!croppedCanvas) return; // Nutzer hat den Zuschnitt abgebrochen
       const dataUrl = canvasToResizedDataUrl(croppedCanvas, 1280, 0.72);
@@ -475,10 +472,80 @@
     }
   }
 
-  document.getElementById("detailCaptureInput").addEventListener("change", (e) => {
+  async function handlePhotoFile(fileInput) {
+    const file = fileInput.files && fileInput.files[0];
+    fileInput.value = "";
+    if (!file || detailSectionId === null) return;
+    try {
+      const rawDataUrl = await loadFileAsDataUrl(file);
+      await processPickedPhoto(rawDataUrl);
+    } catch (err) {
+      console.warn("Foto konnte nicht gelesen werden", err);
+      openAlertModal({ title: "Foto fehlgeschlagen", message: "Das Foto konnte nicht verarbeitet werden. Bitte erneut versuchen." });
+    }
+  }
+
+  document.getElementById("detailUploadInput").addEventListener("change", (e) => {
     handlePhotoFile(e.target);
   });
-  document.getElementById("detailUploadInput").addEventListener("change", (e) => {
+
+  // ---------- Live camera capture (forces the rear/environment camera) ----------
+  let cameraStream = null;
+
+  function stopCameraStream() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      cameraStream = null;
+    }
+  }
+
+  async function openCameraCapture() {
+    if (detailSectionId === null) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      document.getElementById("detailCaptureInput").click();
+      return;
+    }
+    const modal = document.getElementById("cameraModal");
+    const video = document.getElementById("cameraVideo");
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+    } catch (err) {
+      console.warn("Kamera-Stream nicht verfügbar, nutze Datei-Dialog als Fallback", err);
+      document.getElementById("detailCaptureInput").click();
+      return;
+    }
+    video.srcObject = cameraStream;
+    modal.hidden = false;
+  }
+
+  function closeCameraCapture() {
+    document.getElementById("cameraModal").hidden = true;
+    const video = document.getElementById("cameraVideo");
+    video.srcObject = null;
+    stopCameraStream();
+  }
+
+  async function captureCameraFrame() {
+    const video = document.getElementById("cameraVideo");
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    closeCameraCapture();
+    await processPickedPhoto(dataUrl);
+  }
+
+  document.getElementById("openCameraBtn").addEventListener("click", openCameraCapture);
+  document.getElementById("cameraCloseBtn").addEventListener("click", closeCameraCapture);
+  document.getElementById("cameraCancelBtn").addEventListener("click", closeCameraCapture);
+  document.getElementById("cameraShutterBtn").addEventListener("click", captureCameraFrame);
+
+  document.getElementById("detailCaptureInput").addEventListener("change", (e) => {
+    // Fallback path only (no getUserMedia support / permission denied)
     handlePhotoFile(e.target);
   });
 

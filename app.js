@@ -261,6 +261,73 @@
     return card;
   }
 
+  // ---------- Generic prompt/confirm/alert dialog (replaces native prompt/confirm/alert) ----------
+  function openDialog(opts) {
+    const withInput = !!opts.withInput;
+    return new Promise((resolve) => {
+      const modal = document.getElementById("appDialogModal");
+      document.getElementById("dialogTitle").textContent = opts.title || "";
+
+      const msgEl = document.getElementById("dialogMessage");
+      if (opts.message) {
+        msgEl.textContent = opts.message;
+        msgEl.hidden = false;
+      } else {
+        msgEl.hidden = true;
+      }
+
+      const input = document.getElementById("dialogInput");
+      input.hidden = !withInput;
+      if (withInput) {
+        input.value = opts.defaultValue || "";
+        if (opts.placeholder) input.placeholder = opts.placeholder;
+      }
+
+      const okBtn = document.getElementById("dialogOkBtn");
+      const cancelBtn = document.getElementById("dialogCancelBtn");
+      okBtn.textContent = opts.confirmLabel || "OK";
+      const showCancel = opts.cancelLabel !== null;
+      cancelBtn.hidden = !showCancel;
+      if (showCancel) cancelBtn.textContent = opts.cancelLabel || "Abbrechen";
+
+      function cleanup(result) {
+        modal.hidden = true;
+        okBtn.removeEventListener("click", onOk);
+        cancelBtn.removeEventListener("click", onCancel);
+        modal.removeEventListener("click", onOverlay);
+        document.removeEventListener("keydown", onKeydown);
+        resolve(result);
+      }
+      function onOk() { cleanup(withInput ? input.value : true); }
+      function onCancel() { cleanup(withInput ? null : false); }
+      function onOverlay(e) { if (e.target.id === "appDialogModal") onCancel(); }
+      function onKeydown(e) {
+        if (e.key === "Enter") { e.preventDefault(); onOk(); }
+        if (e.key === "Escape") onCancel();
+      }
+
+      okBtn.addEventListener("click", onOk);
+      cancelBtn.addEventListener("click", onCancel);
+      modal.addEventListener("click", onOverlay);
+      document.addEventListener("keydown", onKeydown);
+
+      modal.hidden = false;
+      if (withInput) setTimeout(() => input.focus(), 0);
+    });
+  }
+
+  function openPromptModal(opts) {
+    return openDialog(Object.assign({}, opts, { withInput: true }));
+  }
+
+  function openConfirmModal(opts) {
+    return openDialog(Object.assign({}, opts, { withInput: false }));
+  }
+
+  function openAlertModal(opts) {
+    return openDialog(Object.assign({}, opts, { withInput: false, cancelLabel: null }));
+  }
+
   // ---------- Item detail modal ----------
   let detailSectionId = null;
   let detailIndex = null;
@@ -361,7 +428,7 @@
       })
       .catch((err) => {
         console.warn("Foto konnte nicht verarbeitet werden", err);
-        alert("Das Foto konnte nicht verarbeitet werden. Bitte erneut versuchen.");
+        openAlertModal({ title: "Foto fehlgeschlagen", message: "Das Foto konnte nicht verarbeitet werden. Bitte erneut versuchen." });
       });
   }
 
@@ -492,35 +559,54 @@
     switchChecklist(e.target.value);
   });
 
-  document.getElementById("newChecklistBtn").addEventListener("click", () => {
-    const label = prompt("Name für die neue Checkliste (z.B. Fahrzeug 2):", "Neues Fahrzeug");
+  document.getElementById("newChecklistBtn").addEventListener("click", async () => {
+    const label = await openPromptModal({
+      title: "Neue Checkliste",
+      message: "Name für die neue Checkliste (z.B. Fahrzeug 2):",
+      defaultValue: "Neues Fahrzeug",
+      confirmLabel: "Anlegen",
+    });
     if (label === null) return;
     const id = createChecklist(label.trim() || "Neues Fahrzeug");
     switchChecklist(id);
   });
 
-  document.getElementById("renameChecklistBtn").addEventListener("click", () => {
+  document.getElementById("renameChecklistBtn").addEventListener("click", async () => {
     const registry = loadRegistry();
     const current = registry.find((c) => c.id === activeChecklistId);
-    const label = prompt("Neuer Name:", current ? current.label : "");
+    const label = await openPromptModal({
+      title: "Checkliste umbenennen",
+      defaultValue: current ? current.label : "",
+      confirmLabel: "Speichern",
+    });
     if (label === null || !label.trim()) return;
     renameChecklist(activeChecklistId, label.trim());
     renderChecklistSwitcher();
   });
 
-  document.getElementById("deleteChecklistBtn").addEventListener("click", () => {
+  document.getElementById("deleteChecklistBtn").addEventListener("click", async () => {
     if (loadRegistry().length <= 1) {
-      alert("Die letzte Checkliste kann nicht gelöscht werden.");
+      await openAlertModal({ title: "Nicht möglich", message: "Die letzte Checkliste kann nicht gelöscht werden." });
       return;
     }
-    if (!confirm("Diese Checkliste inklusive aller Haken, Kommentare und Fotos endgültig löschen?")) return;
+    const confirmed = await openConfirmModal({
+      title: "Checkliste löschen",
+      message: "Diese Checkliste inklusive aller Haken, Kommentare und Fotos endgültig löschen?",
+      confirmLabel: "Löschen",
+    });
+    if (!confirmed) return;
     deleteChecklist(activeChecklistId);
     switchChecklist(getActiveId());
   });
 
   // ---------- Reset ----------
-  document.getElementById("resetBtn").addEventListener("click", () => {
-    if (!confirm("Wirklich alle Haken, Kommentare, Fotos und Felder dieser Checkliste zurücksetzen?")) return;
+  document.getElementById("resetBtn").addEventListener("click", async () => {
+    const confirmed = await openConfirmModal({
+      title: "Zurücksetzen",
+      message: "Wirklich alle Haken, Kommentare, Fotos und Felder dieser Checkliste zurücksetzen?",
+      confirmLabel: "Zurücksetzen",
+    });
+    if (!confirmed) return;
     state = emptyState();
     persist();
     render();

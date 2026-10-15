@@ -448,3 +448,32 @@ input:checked ~ .item-text {
   gap: 6px;
   cursor: pointer;
 }
+
+/* ---------- Generic prompt/confirm dialog ---------- */
+.dialog-card {
+  max-width: 380px;
+}
+.dialog-message {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+  margin: 0 0 14px;
+}
+.dialog-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 15px;
+  background: var(--bg);
+  color: var(--text);
+  margin-bottom: 16px;
+}
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.dialog-actions .btn {
+  flex: 0 0 auto;
+}

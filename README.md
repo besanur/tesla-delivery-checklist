@@ -2,7 +2,7 @@
 
 Eine offline-fähige, werbefreie Checkliste für die Fahrzeugabholung (Delivery Day) des Tesla Model Y Juniper. Läuft komplett im Browser – **kein Backend, kein Tracking**. Dein Fortschritt wird nur lokal in deinem Browser (`localStorage`) gespeichert.
 
-👉 **[Live-Demo öffnen](#)** *(Link nach GitHub-Pages-Setup eintragen)*
+👉 **[Live-Demo öffnen](https://besanur.github.io/tesla-delivery-checklist)** *(Link nach GitHub-Pages-Setup eintragen)*
 
 ## Funktionen
 
